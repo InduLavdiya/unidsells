@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>My Ads – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .ad-row{display:flex;align-items:center;gap:14px;background:#fff;border-radius:var(--r);padding:14px 18px;margin-bottom:10px;box-shadow:var(--shadow);border:1px solid var(--border);cursor:pointer;transition:var(--tr)}
+    .ad-row:hover{border-color:rgba(200,151,58,.3);transform:translateX(3px)}
+    .ad-thumb{width:78px;height:78px;border-radius:10px;object-fit:cover;background:var(--bg2);flex-shrink:0}
+    .ad-body{flex:1;min-width:0}
+    .ad-ttl{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ad-price{color:var(--gold);font-family:'Playfair Display',serif;font-weight:800;font-size:16px;margin-top:2px}
+    .ad-meta{font-size:12px;color:var(--text-muted);margin-top:4px}
+    .ad-acts{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+    .tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:22px;background:#fff}
+    .tab{flex:1;text-align:center;padding:14px;font-weight:600;font-size:14px;cursor:pointer;color:var(--text-muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:var(--tr)}
+    .tab.active{color:var(--gold);border-color:var(--gold)}
+    .main{padding:28px 40px;max-width:900px;margin:0 auto}
+    @media(max-width:768px){.main{padding:16px}.ad-acts{display:none}}
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="logo" onclick="location.href='/'">Unid<span>Sells</span></div>
+    <div class="nav-actions">
+      <button class="btn btn-ghost btn-sm" onclick="location.href='/'">← Home</button>
+      <a href="/sell.html" class="btn btn-gold btn-sm">+ Post Ad</a>
+    </div>
+  </nav>
+  <div style="background:var(--dark);padding:22px 40px 18px">
+    <h1 id="page-title" style="color:#fff;font-size:26px">My Ads</h1>
+    <p style="color:rgba(255,255,255,.45);font-size:13px;margin-top:4px">Manage all your listings</p>
+  </div>
+  <div class="main">
+    <div class="tabs" id="tabs">
+      <div class="tab active" onclick="filterStatus('active',this)">✅ Active</div>
+      <div class="tab" onclick="filterStatus('sold',this)">🔒 Sold</div>
+    </div>
+    <div id="ads-wrap"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+  <div id="bottom-nav"></div>
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    renderBottomNav('myads');
+    const params = new URLSearchParams(location.search);
+    const viewSeller = params.get('seller');
+    let curStatus = 'active';
+    if (viewSeller && viewSeller !== user._id) {
+      document.getElementById('page-title').textContent = "Seller's Listings";
+      document.getElementById('tabs').style.display = 'none';
+    }
+    function filterStatus(s, el) { curStatus = s; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); el.classList.add('active'); load(); }
+    async function load() {
+      const sid = viewSeller || user._id;
+      const c = document.getElementById('ads-wrap');
+      c.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+      try {
+        let url = '/listings?seller=' + sid;
+        if (!viewSeller || viewSeller === user._id) url += '&status=' + curStatus;
+        const listings = await apiFetch(url);
+        if (!listings.length) {
+          c.innerHTML = '<div class="empty-state"><div class="icon">📦</div><h3>No ads here</h3><p>' + (!viewSeller ? 'Post your first listing to start selling!' : 'No listings found') + '</p>' + (!viewSeller ? '<a href="/sell.html" class="btn btn-gold btn-sm" style="margin-top:18px">Post First Ad</a>' : '') + '</div>';
+          return;
+        }
+        const isMine = !viewSeller || viewSeller === user._id;
+        c.innerHTML = listings.map(l => {
+          const img = l.images?.[0] || 'https://placehold.co/78x78/F7F5F0/C8973A?text=?';
+          const imgCount = l.images?.length || 0;
+          return `<div class="ad-row" onclick="location.href='/product.html?id=${l._id}'">
+            <div style="position:relative">
+              <img class="ad-thumb" src="${img}" alt="${l.title}" onerror="this.src='https://placehold.co/78x78/F7F5F0/C8973A?text=?'">
+              ${imgCount > 1 ? `<div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px">${imgCount}📷</div>` : ''}
+            </div>
+            <div class="ad-body">
+              <div class="ad-ttl">${l.title}</div>
+              <div class="ad-price">${fmt(l.price)}</div>
+              <div class="ad-meta">📍 ${l.location} · 🕐 ${timeAgo(l.createdAt)} · 👁️ ${l.views} views</div>
+              <span class="tag ${l.status==='sold'?'tag-sold':l.status==='flagged'?'tag-flagged':'tag-active'}" style="margin-top:6px;display:inline-flex">${l.status==='sold'?'🔒 Sold':l.status==='flagged'?'🚩 Flagged':'✅ Active'}</span>
+            </div>
+            ${isMine ? `<div class="ad-acts" onclick="event.stopPropagation()">
+              <a href="/sell.html?edit=${l._id}" class="btn btn-ghost btn-xs">✏️ Edit</a>
+              <button class="btn btn-xs ${l.status==='sold'?'btn-ghost':'btn-green'}" onclick="toggleSold('${l._id}','${l.status}')">${l.status==='sold'?'Activate':'Mark Sold'}</button>
+              <button class="btn btn-red btn-xs" onclick="delAd('${l._id}')">🗑️ Del</button>
+            </div>` : ''}
+          </div>`;
+        }).join('');
+      } catch (e) { c.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error</h3><p>' + e.message + '</p></div>'; }
+    }
+    async function toggleSold(id, status) {
+      try { await apiFetch('/listings/'+id,{method:'PUT',body:JSON.stringify({status:status==='sold'?'active':'sold'})}); showToast('Updated!','success'); load(); }
+      catch(e) { showToast(e.message,'error'); }
+    }
+    async function delAd(id) {
+      if (!confirm('Delete this listing permanently?')) return;
+      try { await apiFetch('/listings/'+id,{method:'DELETE'}); showToast('Deleted','info'); load(); }
+      catch(e) { showToast(e.message,'error'); }
+    }
+    load();
+  </script>
+</body>
+</html>

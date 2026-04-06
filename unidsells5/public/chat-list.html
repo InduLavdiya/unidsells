@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Messages – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="logo" onclick="location.href='/'">Unid<span>Sells</span></div>
+    <div class="nav-actions"><button class="btn btn-ghost btn-sm" onclick="location.href='/'">← Home</button></div>
+  </nav>
+  <div style="background:var(--dark);padding:22px 40px 18px">
+    <h1 style="color:#fff;font-size:26px">Messages</h1>
+    <p style="color:rgba(255,255,255,.45);font-size:13px;margin-top:4px">Your conversations with buyers & sellers</p>
+  </div>
+  <div id="chats-wrap"><div class="loader"><div class="spinner"></div></div></div>
+  <div id="bottom-nav"></div>
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    renderBottomNav('chats');
+    async function load() {
+      try {
+        const chats = await apiFetch('/chats/user/' + user._id);
+        const c = document.getElementById('chats-wrap');
+        if (!chats.length) {
+          c.innerHTML = '<div class="empty-state"><div class="icon">💬</div><h3>No conversations yet</h3><p>Message a seller by visiting any product listing</p><a href="/" class="btn btn-gold btn-sm" style="margin-top:18px">Browse Listings</a></div>';
+          return;
+        }
+        c.innerHTML = '<div style="background:#fff">' + chats.map(ch => {
+          const other = ch.buyer._id === user._id ? ch.seller : ch.buyer;
+          const last = ch.messages[ch.messages.length - 1];
+          const unread = ch.messages.filter(m => m.sender !== user._id && !m.read).length;
+          return `<div class="chat-list-item" onclick="location.href='/chat.html?id=${ch._id}'">
+            ${avatarEl(other)}
+            <div class="chat-info">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div class="chat-name">${other.name}</div>
+                <div class="chat-time">${last ? timeAgo(last.createdAt) : ''}</div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+                <div class="chat-preview">${ch.listing?.title||'Item'} — ${last ? last.text : 'No messages yet'}</div>
+                ${unread > 0 ? `<div style="background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 4px;flex-shrink:0">${unread}</div>` : ''}
+              </div>
+            </div>
+          </div>`;
+        }).join('') + '</div>';
+      } catch (e) {
+        document.getElementById('chats-wrap').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error loading chats</h3><p>' + e.message + '</p></div>';
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

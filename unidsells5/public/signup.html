@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Sign Up – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body style="padding-bottom:0">
+  <div class="auth-wrap">
+    <div class="auth-left">
+      <div class="auth-left-inner">
+        <div class="auth-logo">UnidSells</div>
+        <div class="auth-tagline">Start <span style="color:var(--gold)">Selling</span> in Minutes</div>
+        <div class="auth-sub">Create your free account and reach thousands of buyers in your area today.</div>
+        <div style="margin-top:36px;background:rgba(200,151,58,.08);border:1px solid rgba(200,151,58,.2);border-radius:16px;padding:22px">
+          <div style="color:var(--gold);font-family:'Playfair Display',serif;font-size:17px;font-weight:700;margin-bottom:7px">100% Free Forever</div>
+          <div style="color:rgba(255,255,255,.45);font-size:13px;line-height:1.75">No listing fees. No hidden charges. Post your first ad for free and start selling today.</div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-right">
+      <div class="auth-form">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(30,123,75,.08);border:1px solid rgba(30,123,75,.2);color:var(--green);padding:5px 14px;border-radius:99px;font-size:12px;font-weight:600;margin-bottom:20px">👤 New User Registration</div>
+        <h2>Create Account</h2>
+        <p>Join UnidSells for free today</p>
+        <div class="form-group"><label class="form-label">Full Name *</label><input type="text" id="name" class="form-input" placeholder="Your full name"></div>
+        <div class="form-group"><label class="form-label">Email Address *</label><input type="email" id="email" class="form-input" placeholder="you@example.com"></div>
+        <div class="form-group"><label class="form-label">Mobile Number (optional)</label><input type="tel" id="mobile" class="form-input" placeholder="+91 98765 43210"></div>
+        <div class="form-group"><label class="form-label">Password *</label><input type="password" id="password" class="form-input" placeholder="Minimum 6 characters"></div>
+        <button class="btn btn-gold btn-full" id="signup-btn" onclick="doSignup()">Create Account →</button>
+        <div style="text-align:center;margin-top:22px;font-size:14px;color:var(--text-muted)">Already have an account? <a href="/login.html" style="color:var(--gold);font-weight:600">Sign in</a></div>
+      </div>
+    </div>
+  </div>
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    if (Auth.getUser()) window.location.href = '/';
+    async function doSignup() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const mobile = document.getElementById('mobile').value.trim();
+      const password = document.getElementById('password').value;
+      if (!name || !email || !password) return showToast('Name, email and password are required', 'error');
+      if (password.length < 6) return showToast('Password must be at least 6 characters', 'error');
+      const btn = document.getElementById('signup-btn');
+      btn.textContent = 'Creating...'; btn.disabled = true;
+      try {
+        const d = await apiFetch('/users/signup', { method: 'POST', body: JSON.stringify({ name, email, mobile: mobile || undefined, password }) });
+        Auth.setUser(d.user);
+        showToast('Welcome to UnidSells, ' + d.user.name + '! 🎉', 'success');
+        setTimeout(() => window.location.href = '/', 700);
+      } catch (e) { showToast(e.message, 'error'); btn.textContent = 'Create Account →'; btn.disabled = false; }
+    }
+  </script>
+</body>
+</html>

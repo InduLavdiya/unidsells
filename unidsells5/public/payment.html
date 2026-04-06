@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Checkout – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .pay-wrap{max-width:960px;margin:0 auto;padding:40px}
+    .pay-grid{display:grid;grid-template-columns:1fr 360px;gap:28px}
+    .order-box{background:#fff;border-radius:var(--r);padding:26px;box-shadow:var(--shadow);border:1px solid var(--border);position:sticky;top:calc(var(--nav) + 16px)}
+    .card-vis{background:linear-gradient(135deg,#0d0d0d 0%,#C8973A 100%);border-radius:18px;padding:26px;color:#fff;position:relative;overflow:hidden;min-height:175px;margin-bottom:22px}
+    .card-vis::before{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.07);top:-60px;right:-60px}
+    .card-chip{width:40px;height:30px;background:rgba(255,255,255,.3);border-radius:6px;margin-bottom:22px}
+    .card-num-vis{font-size:18px;letter-spacing:4px;font-family:'Courier New',monospace;margin-bottom:14px}
+    .card-row{display:flex;justify-content:space-between}
+    .card-lbl{font-size:10px;opacity:.55;text-transform:uppercase;letter-spacing:.8px}
+    .card-val{font-size:13px;font-weight:700;margin-top:2px}
+    .pay-methods{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+    .divider{border:none;border-top:1px solid var(--border);margin:18px 0}
+    @media(max-width:768px){.pay-grid{grid-template-columns:1fr}.order-box{position:static}.pay-wrap{padding:18px}}
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="logo" onclick="location.href='/'">Unid<span>Sells</span></div>
+    <div class="nav-actions"><button class="btn btn-ghost btn-sm" onclick="history.back()">← Back</button></div>
+  </nav>
+
+  <div id="pay-content">
+    <div class="pay-wrap">
+      <h1 style="margin-bottom:6px">Secure Checkout</h1>
+      <p style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Complete your purchase safely</p>
+
+      <div class="pay-grid">
+        <!-- LEFT FORM -->
+        <div>
+          <div style="background:#fff;border-radius:var(--r);padding:26px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:20px">
+            <h3 style="font-size:17px;margin-bottom:18px">Contact & Delivery</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="form-group" style="margin:0"><label class="form-label">First Name</label><input type="text" id="fname" class="form-input" placeholder="Anil"></div>
+              <div class="form-group" style="margin:0"><label class="form-label">Last Name</label><input type="text" id="lname" class="form-input" placeholder="Kumar"></div>
+            </div>
+            <div class="form-group" style="margin-top:14px"><label class="form-label">Phone Number</label><input type="tel" id="phone" class="form-input" placeholder="+91 98765 43210"></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Delivery Address</label><textarea id="address" class="form-input" rows="3" placeholder="House no, Street, Area, City, PIN Code"></textarea></div>
+          </div>
+
+          <div style="background:#fff;border-radius:var(--r);padding:26px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:20px">
+            <h3 style="font-size:17px;margin-bottom:18px">Payment Method</h3>
+            <div class="pay-methods">
+              <div class="pay-method selected" onclick="selectMethod(this,'card')"><div class="radio"></div><span style="font-size:20px">💳</span><div><div style="font-weight:600;font-size:14px">Credit / Debit Card</div><div style="font-size:12px;color:var(--text-muted)">Visa, Mastercard, RuPay</div></div></div>
+              <div class="pay-method" onclick="selectMethod(this,'upi')"><div class="radio"></div><span style="font-size:20px">📲</span><div><div style="font-weight:600;font-size:14px">UPI</div><div style="font-size:12px;color:var(--text-muted)">GPay, PhonePe, Paytm, BHIM</div></div></div>
+              <div class="pay-method" onclick="selectMethod(this,'netbanking')"><div class="radio"></div><span style="font-size:20px">🏦</span><div><div style="font-weight:600;font-size:14px">Net Banking</div><div style="font-size:12px;color:var(--text-muted)">All major banks</div></div></div>
+              <div class="pay-method" onclick="selectMethod(this,'cod')"><div class="radio"></div><span style="font-size:20px">💵</span><div><div style="font-weight:600;font-size:14px">Cash on Delivery</div><div style="font-size:12px;color:var(--text-muted)">Pay when you receive</div></div></div>
+            </div>
+
+            <!-- Card form -->
+            <div id="card-form">
+              <div class="card-vis">
+                <div class="card-chip"></div>
+                <div class="card-num-vis" id="card-disp">•••• •••• •••• ••••</div>
+                <div class="card-row">
+                  <div><div class="card-lbl">Card Holder</div><div class="card-val" id="holder-disp">YOUR NAME</div></div>
+                  <div><div class="card-lbl">Expires</div><div class="card-val" id="exp-disp">MM/YY</div></div>
+                </div>
+              </div>
+              <div class="form-group"><label class="form-label">Card Number</label><input type="text" id="card-num" class="form-input" placeholder="1234 5678 9012 3456" maxlength="19" oninput="fmtCard(this)"></div>
+              <div class="form-group"><label class="form-label">Cardholder Name</label><input type="text" id="card-holder" class="form-input" placeholder="Name on card" oninput="document.getElementById('holder-disp').textContent=this.value.toUpperCase()||'YOUR NAME'"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-group" style="margin:0"><label class="form-label">Expiry</label><input type="text" id="expiry" class="form-input" placeholder="MM/YY" maxlength="5" oninput="fmtExp(this)"></div>
+                <div class="form-group" style="margin:0"><label class="form-label">CVV</label><input type="password" id="cvv" class="form-input" placeholder="•••" maxlength="4"></div>
+              </div>
+            </div>
+            <div id="upi-form" style="display:none"><div class="form-group"><label class="form-label">UPI ID</label><input type="text" id="upi-id" class="form-input" placeholder="yourname@paytm"></div></div>
+            <div id="netbanking-form" style="display:none"><div class="form-group"><label class="form-label">Select Bank</label><select class="form-input"><option>State Bank of India</option><option>HDFC Bank</option><option>ICICI Bank</option><option>Axis Bank</option><option>Kotak Mahindra Bank</option><option>Punjab National Bank</option><option>Other</option></select></div></div>
+            <div id="cod-form" style="display:none"><div style="background:var(--bg);border-radius:var(--rsm);padding:14px;font-size:13px;color:var(--text-muted);line-height:1.6">💵 Pay in cash when your item is delivered. Make sure you're available at the given address.</div></div>
+          </div>
+
+          <button class="btn btn-gold btn-full" onclick="pay()" style="padding:15px;font-size:15px">🔒 Pay Securely</button>
+          <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:10px">🔐 256-bit SSL encrypted · Your data is safe</div>
+        </div>
+
+        <!-- RIGHT ORDER SUMMARY -->
+        <div class="order-box">
+          <h3 style="font-size:17px;margin-bottom:18px">Order Summary</h3>
+          <div style="display:flex;gap:12px;margin-bottom:18px">
+            <img id="o-img" src="" style="width:68px;height:68px;border-radius:10px;object-fit:cover;border:1px solid var(--border);flex-shrink:0">
+            <div><div id="o-title" style="font-weight:600;font-size:14px;line-height:1.4"></div><div id="o-loc" style="font-size:12px;color:var(--text-muted);margin-top:3px"></div><div id="o-price" style="font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--gold);margin-top:6px"></div></div>
+          </div>
+          <hr class="divider">
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Item Price</span><span id="p-line" style="font-weight:600"></span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Platform Fee</span><span style="color:var(--green);font-weight:600">FREE</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Delivery</span><span style="font-weight:600">₹0 – ₹200</span></div>
+          </div>
+          <hr class="divider">
+          <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:700"><span>Total</span><span id="total-line" style="color:var(--gold);font-family:'Playfair Display',serif"></span></div>
+          <hr class="divider">
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.8">✓ Secure payment &nbsp; ✓ Buyer protection<br>✓ Easy returns within 7 days</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    let method = 'card';
+    const listing = JSON.parse(localStorage.getItem('us_pay_listing') || 'null');
+    if (!listing) { showToast('No item selected','error'); setTimeout(()=>location.href='/',1000); }
+    else {
+      document.getElementById('o-img').src = listing.images?.[0] || 'https://placehold.co/68?text=?';
+      document.getElementById('o-title').textContent = listing.title;
+      document.getElementById('o-loc').textContent = '📍 ' + listing.location;
+      document.getElementById('o-price').textContent = fmt(listing.price);
+      document.getElementById('p-line').textContent = fmt(listing.price);
+      document.getElementById('total-line').textContent = fmt(listing.price);
+    }
+
+    function selectMethod(el, m) {
+      method = m;
+      document.querySelectorAll('.pay-method').forEach(p => p.classList.remove('selected'));
+      el.classList.add('selected');
+      ['card-form','upi-form','netbanking-form','cod-form'].forEach(id => document.getElementById(id).style.display='none');
+      document.getElementById(m+'-form').style.display = 'block';
+    }
+    function fmtCard(el) {
+      let v = el.value.replace(/\D/g,'').substring(0,16);
+      el.value = v.replace(/(.{4})/g,'$1 ').trim();
+      document.getElementById('card-disp').textContent = v.padEnd(16,'•').replace(/(.{4})/g,'$1 ').trim();
+    }
+    function fmtExp(el) {
+      let v = el.value.replace(/\D/g,'');
+      if (v.length>=3) v = v.slice(0,2)+'/'+v.slice(2);
+      el.value = v;
+      document.getElementById('exp-disp').textContent = el.value||'MM/YY';
+    }
+    function pay() {
+      const fn = document.getElementById('fname').value.trim();
+      const ph = document.getElementById('phone').value.trim();
+      const addr = document.getElementById('address').value.trim();
+      if (!fn||!ph||!addr) return showToast('Please fill contact & delivery details','error');
+      if (method==='card') {
+        const n = document.getElementById('card-num').value.replace(/\s/g,'');
+        if (!n||n.length<16) return showToast('Enter valid card number','error');
+        if (!document.getElementById('card-holder').value.trim()) return showToast('Enter cardholder name','error');
+        if (!document.getElementById('expiry').value||document.getElementById('expiry').value.length<5) return showToast('Enter valid expiry','error');
+        if (!document.getElementById('cvv').value||document.getElementById('cvv').value.length<3) return showToast('Enter valid CVV','error');
+      }
+      if (method==='upi' && !document.getElementById('upi-id').value.includes('@')) return showToast('Enter valid UPI ID','error');
+      const btn = document.querySelector('[onclick="pay()"]');
+      btn.textContent = '⏳ Processing payment…'; btn.disabled = true;
+      setTimeout(showSuccess, 2400);
+    }
+    function showSuccess() {
+      localStorage.removeItem('us_pay_listing');
+      document.getElementById('pay-content').innerHTML = `
+        <div style="text-align:center;padding:80px 24px">
+          <div style="width:80px;height:80px;background:rgba(30,123,75,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 22px">✓</div>
+          <h2 style="font-size:28px;margin-bottom:10px">Payment Successful!</h2>
+          <p style="color:var(--text-muted);font-size:15px;margin-bottom:6px">Your order has been placed.</p>
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:30px">Order ID: <strong>#US${Date.now().toString().slice(-8)}</strong></p>
+          <div style="background:var(--bg);border-radius:var(--r);padding:22px;display:inline-block;margin-bottom:30px;min-width:260px;text-align:left">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:5px">Item Purchased</div>
+            <div style="font-weight:700;font-size:15px">${listing.title}</div>
+            <div style="color:var(--gold);font-family:'Playfair Display',serif;font-size:22px;font-weight:800;margin-top:8px">${fmt(listing.price)}</div>
+          </div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-gold" onclick="location.href='/'">Continue Shopping</button>
+            <button class="btn btn-ghost" onclick="location.href='/myads.html'">View My Orders</button>
+          </div>
+        </div>`;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Admin Panel – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .atabs{display:flex;border-bottom:2px solid var(--border);background:#fff;overflow-x:auto;scrollbar-width:none}
+    .atabs::-webkit-scrollbar{display:none}
+    .atab{flex-shrink:0;padding:14px 20px;font-weight:600;font-size:14px;cursor:pointer;color:var(--text-muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:var(--tr);white-space:nowrap}
+    .atab.active{color:var(--gold);border-color:var(--gold)}
+    .abody{padding:22px 40px;max-width:1400px;margin:0 auto}
+    .sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+    @media(max-width:900px){.abody{padding:14px}.admin-stats{grid-template-columns:repeat(2,1fr)!important;padding:14px 14px 0!important}}
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="logo" onclick="location.href='/'">Unid<span>Sells</span></div>
+    <div style="display:flex;align-items:center;gap:8px"><span class="tag tag-gold">👑 Admin</span><span id="aname" style="color:rgba(255,255,255,.5);font-size:13px"></span></div>
+    <div class="nav-actions">
+      <button class="btn btn-ghost btn-sm" onclick="location.href='/'">← Site</button>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div style="background:linear-gradient(135deg,#080808 0%,#181208 100%);padding:26px 40px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(200,151,58,.14) 0%,transparent 60%)"></div>
+    <div style="position:relative">
+      <div style="color:var(--gold);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Admin Control Panel</div>
+      <h1 style="color:#fff;font-size:24px">👑 UnidSells Dashboard</h1>
+      <div style="color:rgba(255,255,255,.35);font-size:13px;margin-top:4px" id="last-upd">Loading...</div>
+    </div>
+  </div>
+
+  <div id="admin-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:22px 40px 0"></div>
+
+  <div style="padding:18px 40px 0">
+    <div class="atabs">
+      <div class="atab active" onclick="showTab('users',this)">👥 Users</div>
+      <div class="atab" onclick="showTab('listings',this)">📦 All Listings</div>
+      <div class="atab" onclick="showTab('chats',this)">💬 Chats</div>
+      <div class="atab" onclick="showTab('flagged',this)">🚩 Flagged</div>
+    </div>
+  </div>
+
+  <div class="abody">
+    <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center">
+      <div style="flex:1;display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:10px 16px">
+        <span style="color:var(--text-muted)">🔍</span>
+        <input type="text" id="srch" placeholder="Search..." style="border:none;flex:1;font-size:14px;outline:none;font-family:inherit" oninput="filterTab()">
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻ Refresh</button>
+    </div>
+    <div id="tab-content"><div class="loader"><div class="spinner"></div></div></div>
+  </div>
+
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    if (!Auth.isAdmin()) { showToast('Access denied – Admins only', 'error'); setTimeout(() => location.href = '/login.html', 1200); }
+    document.getElementById('aname').textContent = user.name;
+
+    let allUsers=[], allListings=[], allChats=[], curTab='users';
+
+    async function loadAll() {
+      try {
+        document.getElementById('last-upd').textContent = 'Refreshing...';
+        const [users, active, sold, flagged, chats] = await Promise.all([
+          apiFetch('/users'),
+          apiFetch('/listings?status=active'),
+          apiFetch('/listings?status=sold'),
+          apiFetch('/listings?status=flagged'),
+          apiFetch('/chats')
+        ]);
+        allUsers = users;
+        allListings = [...active, ...sold, ...flagged];
+        allChats = chats;
+        renderStats();
+        renderTab();
+        document.getElementById('last-upd').textContent = 'Last updated: ' + new Date().toLocaleTimeString('en-IN');
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    function renderStats() {
+      const blocked = allUsers.filter(u=>u.blocked).length;
+      const activeL = allListings.filter(l=>l.status==='active').length;
+      const soldL = allListings.filter(l=>l.status==='sold').length;
+      const flaggedL = allListings.filter(l=>l.status==='flagged').length;
+      document.getElementById('admin-stats').innerHTML = `
+        <div class="stat-card"><div class="stat-num">${allUsers.length}</div><div class="stat-label">Total Users</div><div style="font-size:12px;color:var(--red);margin-top:3px">${blocked} blocked</div></div>
+        <div class="stat-card"><div class="stat-num">${activeL}</div><div class="stat-label">Active Listings</div><div style="font-size:12px;color:var(--text-muted);margin-top:3px">${soldL} sold</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--orange)">${flaggedL}</div><div class="stat-label">Flagged Listings</div><div style="font-size:12px;color:var(--text-muted);margin-top:3px">Need review</div></div>
+        <div class="stat-card"><div class="stat-num">${allChats.length}</div><div class="stat-label">Total Chats</div><div style="font-size:12px;color:var(--text-muted);margin-top:3px">Conversations</div></div>`;
+    }
+
+    function showTab(tab, el) { curTab=tab; document.querySelectorAll('.atab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); document.getElementById('srch').value=''; renderTab(); }
+    function filterTab() { renderTab(document.getElementById('srch').value.toLowerCase()); }
+
+    function renderTab(q='') {
+      const c = document.getElementById('tab-content');
+      if (curTab==='users') renderUsers(q,c);
+      else if (curTab==='listings') renderListings(allListings.filter(l=>l.status!=='flagged'),q,c);
+      else if (curTab==='chats') renderChats(q,c);
+      else if (curTab==='flagged') renderListings(allListings.filter(l=>l.status==='flagged'),q,c,true);
+    }
+
+    function renderUsers(q,c) {
+      let data = allUsers;
+      if (q) data = data.filter(u=>u.name.toLowerCase().includes(q)||(u.email||'').includes(q)||(u.mobile||'').includes(q));
+      if (!data.length) { c.innerHTML='<div class="empty-state"><div class="icon">👥</div><h3>No users found</h3></div>'; return; }
+      c.innerHTML = `<div class="table-wrap"><table class="admin-table">
+        <thead><tr><th>User</th><th>Contact</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+        <tbody>${data.map(u=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:10px">
+            <div class="avatar sm" style="background:${avatarColor(u.name)}">${u.avatar?`<img src="${u.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">`:initials(u.name)}</div>
+            <div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--text-muted)">ID:${u._id.slice(-6)}</div></div>
+          </div></td>
+          <td style="font-size:12px;color:var(--text-muted)">${u.email||''}${u.mobile?'<br>'+u.mobile:''}</td>
+          <td><span class="tag ${u.role==='admin'?'tag-gold':'tag-blue'}">${u.role}</span></td>
+          <td><div style="display:flex;align-items:center;gap:6px"><div class="sdot" style="background:${u.blocked?'var(--red)':'var(--green)'}"></div><span style="font-size:13px">${u.blocked?'Blocked':'Active'}</span></div></td>
+          <td style="font-size:12px;color:var(--text-muted)">${new Date(u.createdAt).toLocaleDateString('en-IN')}</td>
+          <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+            ${u._id!==user._id?`
+              <button class="btn btn-xs ${u.blocked?'btn-green':'btn-ghost'}" onclick="toggleBlock('${u._id}')">${u.blocked?'Unblock':'Block'}</button>
+              <button class="btn btn-red btn-xs" onclick="deleteUser('${u._id}')">Delete</button>
+            `:'<span style="font-size:12px;color:var(--text-muted)">You</span>'}
+          </div></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    }
+
+    function renderListings(listings, q, c, isFlagged=false) {
+      let data = listings;
+      if (q) data = data.filter(l=>l.title.toLowerCase().includes(q)||l.location.toLowerCase().includes(q)||(l.seller?.name||'').toLowerCase().includes(q));
+      if (!data.length) { c.innerHTML='<div class="empty-state"><div class="icon">📦</div><h3>No listings found</h3></div>'; return; }
+      c.innerHTML = `<div class="table-wrap"><table class="admin-table">
+        <thead><tr><th>Listing</th><th>Price</th><th>Category</th><th>Seller</th><th>Status</th><th>Views</th><th>Actions</th></tr></thead>
+        <tbody>${data.map(l=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:10px">
+            <img src="${l.images?.[0]||'https://placehold.co/44?text=?'}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid var(--border)" onerror="this.src='https://placehold.co/44?text=?'">
+            <div style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13px">${l.title}</div>
+          </div></td>
+          <td style="font-weight:700;color:var(--gold)">${fmt(l.price)}</td>
+          <td><span class="tag tag-blue" style="font-size:11px">${l.category}</span></td>
+          <td style="font-size:13px">${l.seller?.name||'—'}</td>
+          <td><span class="tag ${l.status==='sold'?'tag-sold':l.status==='flagged'?'tag-flagged':'tag-active'}">${l.status}</span></td>
+          <td style="font-size:13px;color:var(--text-muted)">${l.views}</td>
+          <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-xs" onclick="location.href='/product.html?id=${l._id}'">View</button>
+            <button class="btn btn-xs ${l.status==='flagged'?'btn-green':'btn-ghost'}" onclick="flagListing('${l._id}')">${l.status==='flagged'?'Unflag':'🚩 Flag'}</button>
+            <button class="btn btn-red btn-xs" onclick="deleteListing('${l._id}')">Delete</button>
+          </div></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    }
+
+    function renderChats(q, c) {
+      let data = allChats;
+      if (q) data = data.filter(ch=>(ch.listing?.title||'').toLowerCase().includes(q)||(ch.buyer?.name||'').toLowerCase().includes(q)||(ch.seller?.name||'').toLowerCase().includes(q));
+      if (!data.length) { c.innerHTML='<div class="empty-state"><div class="icon">💬</div><h3>No chats found</h3></div>'; return; }
+      c.innerHTML = `<div class="table-wrap"><table class="admin-table">
+        <thead><tr><th>Listing</th><th>Buyer</th><th>Seller</th><th>Messages</th><th>Last Activity</th></tr></thead>
+        <tbody>${data.map(ch=>`<tr>
+          <td style="font-weight:500;font-size:13px">${ch.listing?.title||'—'}</td>
+          <td style="font-size:13px">${ch.buyer?.name||'—'}</td>
+          <td style="font-size:13px">${ch.seller?.name||'—'}</td>
+          <td><span class="tag tag-blue">${ch.messages?.length||0} msgs</span></td>
+          <td style="font-size:12px;color:var(--text-muted)">${timeAgo(ch.updatedAt)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    }
+
+    async function toggleBlock(id) {
+      try {
+        const d = await apiFetch('/users/'+id+'/block',{method:'PUT',body:JSON.stringify({})});
+        showToast(d.message,'success');
+        const u = allUsers.find(x=>x._id===id); if(u) u.blocked=d.blocked;
+        renderStats(); filterTab();
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('Delete this user permanently?')) return;
+      try {
+        await apiFetch('/users/'+id,{method:'DELETE'});
+        allUsers = allUsers.filter(u=>u._id!==id);
+        renderStats(); filterTab(); showToast('User deleted','info');
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    async function flagListing(id) {
+      try {
+        const d = await apiFetch('/listings/'+id+'/flag',{method:'PUT',body:JSON.stringify({})});
+        const l = allListings.find(x=>x._id===id); if(l) l.status=d.listing.status;
+        renderStats(); filterTab(); showToast(d.message,'warn');
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    async function deleteListing(id) {
+      if (!confirm('Delete this listing permanently?')) return;
+      try {
+        await apiFetch('/listings/'+id,{method:'DELETE'});
+        allListings = allListings.filter(l=>l._id!==id);
+        renderStats(); filterTab(); showToast('Listing deleted','info');
+      } catch(e) { showToast(e.message,'error'); }
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>

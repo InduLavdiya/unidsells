@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Product – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body{padding-bottom:0}
+    /* Image slider */
+    .slider-wrap{position:relative;background:var(--dark);overflow:hidden}
+    .slider-img{width:100%;height:100%;object-fit:contain;display:block;cursor:zoom-in;transition:opacity .25s}
+    .slider-arrow{
+      position:absolute;top:50%;transform:translateY(-50%);
+      width:44px;height:44px;border-radius:50%;
+      background:rgba(255,255,255,.92);
+      display:flex;align-items:center;justify-content:center;
+      font-size:20px;cursor:pointer;z-index:10;
+      box-shadow:0 2px 12px rgba(0,0,0,.25);
+      transition:var(--tr);border:none;
+      color:var(--dark);font-weight:700;
+    }
+    .slider-arrow:hover{background:#fff;transform:translateY(-50%) scale(1.1)}
+    .slider-arrow.prev{left:14px}
+    .slider-arrow.next{right:14px}
+    .slider-dots{position:absolute;bottom:14px;left:0;right:0;display:flex;justify-content:center;gap:7px;z-index:10}
+    .sdot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.45);cursor:pointer;transition:var(--tr)}
+    .sdot.active{background:#fff;width:22px;border-radius:4px}
+    .img-counter{position:absolute;top:14px;right:14px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;z-index:10}
+    /* Zoom modal */
+    .zoom-modal{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:600;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+    .zoom-modal.show{display:flex}
+    .zoom-modal img{max-width:94vw;max-height:80vh;object-fit:contain;border-radius:8px}
+    .zoom-close{position:absolute;top:20px;right:20px;width:44px;height:44px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;color:#fff}
+    /* Action bar fixed bottom on mobile */
+    .action-bar{display:flex;gap:10px;margin-top:28px;flex-wrap:wrap}
+    @media(max-width:900px){
+      .action-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:12px 16px;border-top:1px solid var(--border);margin:0;z-index:100}
+      body{padding-bottom:72px}
+    }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="logo" onclick="location.href='/'">Unid<span>Sells</span></div>
+    <div class="nav-actions">
+      <button class="btn btn-ghost btn-sm" onclick="history.back()">← Back</button>
+      <button class="nav-btn" id="wl-nav" onclick="toggleWl()" title="Wishlist">🤍</button>
+    </div>
+  </nav>
+
+  <div id="content"><div class="loader"><div class="spinner"></div></div></div>
+
+  <!-- Zoom modal -->
+  <div class="zoom-modal" id="zoom-modal">
+    <div class="zoom-close" onclick="closeZoom()">✕</div>
+    <img id="zoom-img" src="" alt="">
+    <div style="display:flex;gap:12px">
+      <button onclick="zoomNav(-1)" class="slider-arrow" style="position:static;transform:none">‹</button>
+      <button onclick="zoomNav(1)" class="slider-arrow" style="position:static;transform:none">›</button>
+    </div>
+  </div>
+
+  <div id="bottom-nav"></div>
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    renderBottomNav('');
+    const lid = new URLSearchParams(location.search).get('id');
+    if (!lid) location.href = '/';
+    let listing = null;
+    let imgs = [];
+    let curIdx = 0;
+
+    async function load() {
+      try {
+        listing = await apiFetch('/listings/' + lid);
+        imgs = listing.images && listing.images.length > 0
+          ? listing.images
+          : ['https://placehold.co/800x600/111/C8973A?text=No+Image'];
+        curIdx = 0;
+        render();
+      } catch (e) {
+        document.getElementById('content').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Not Found</h3><p>' + e.message + '</p></div>';
+      }
+    }
+
+    function goSlide(n) {
+      curIdx = (n + imgs.length) % imgs.length;
+      document.getElementById('main-img').style.opacity = '0';
+      setTimeout(() => {
+        document.getElementById('main-img').src = imgs[curIdx];
+        document.getElementById('main-img').style.opacity = '1';
+      }, 120);
+      document.querySelectorAll('.sdot').forEach((d, i) => d.classList.toggle('active', i === curIdx));
+      const ctr = document.getElementById('img-counter');
+      if (ctr) ctr.textContent = (curIdx + 1) + '/' + imgs.length;
+    }
+
+    function openZoom(idx) {
+      curIdx = idx;
+      document.getElementById('zoom-img').src = imgs[idx];
+      document.getElementById('zoom-modal').classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeZoom() {
+      document.getElementById('zoom-modal').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    function zoomNav(dir) {
+      curIdx = (curIdx + dir + imgs.length) % imgs.length;
+      document.getElementById('zoom-img').src = imgs[curIdx];
+    }
+
+    // Keyboard nav
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('zoom-modal').classList.contains('show')) {
+        if (e.key === 'ArrowLeft') zoomNav(-1);
+        if (e.key === 'ArrowRight') zoomNav(1);
+        if (e.key === 'Escape') closeZoom();
+      }
+    });
+
+    function render() {
+      const isMine = listing.seller._id === user._id;
+      const inWl = Wishlist.has(listing._id);
+      document.getElementById('wl-nav').textContent = inWl ? '❤️' : '🤍';
+
+      const hasMultiple = imgs.length > 1;
+
+      // Build slider HTML
+      const sliderHTML = `
+        <div class="slider-wrap" style="height:${window.innerWidth > 900 ? 'calc(100vh - var(--nav))' : '62vw'}">
+          <img id="main-img" class="slider-img" src="${imgs[0]}" alt="Product" onclick="openZoom(${curIdx})">
+          ${hasMultiple ? `
+            <button class="slider-arrow prev" onclick="goSlide(curIdx-1)">‹</button>
+            <button class="slider-arrow next" onclick="goSlide(curIdx+1)">›</button>
+            <div class="slider-dots">${imgs.map((_,i) => `<div class="sdot ${i===0?'active':''}" onclick="goSlide(${i})"></div>`).join('')}</div>
+            <div class="img-counter">${imgs.length > 1 ? '1/'+imgs.length : ''}</div>
+          ` : ''}
+        </div>`;
+
+      // Thumb strip for desktop
+      const thumbsHTML = imgs.length > 1
+        ? `<div class="thumb-strip">${imgs.map((s,i) => `<img src="${s}" class="thumb ${i===0?'active':''}" onclick="goSlide(${i})" onerror="this.src='https://placehold.co/56?text=?'">`).join('')}</div>`
+        : '';
+
+      document.getElementById('content').innerHTML = `
+        <div class="detail-wrap">
+          <!-- Gallery -->
+          <div class="detail-gallery" style="display:flex;flex-direction:column">
+            ${sliderHTML}
+            ${thumbsHTML}
+          </div>
+
+          <!-- Info -->
+          <div class="detail-info">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+              <span class="tag tag-gold">📂 ${listing.category}</span>
+              <span class="tag ${listing.status==='sold'?'tag-sold':listing.status==='flagged'?'tag-flagged':'tag-active'}">
+                ${listing.status==='sold'?'🔒 Sold':listing.status==='flagged'?'🚩 Flagged':'✅ Available'}
+              </span>
+            </div>
+
+            <div class="detail-title">${listing.title}</div>
+            <div class="detail-price">${fmt(listing.price)}</div>
+
+            <div style="display:flex;gap:18px;margin:18px 0;flex-wrap:wrap">
+              <div style="font-size:13px;color:var(--text-muted)">📍 <strong>${listing.location}</strong></div>
+              <div style="font-size:13px;color:var(--text-muted)">👁️ ${listing.views} views</div>
+              <div style="font-size:13px;color:var(--text-muted)">🕐 ${timeAgo(listing.createdAt)}</div>
+              ${imgs.length > 1 ? `<div style="font-size:13px;color:var(--text-muted)">🖼️ ${imgs.length} photos</div>` : ''}
+            </div>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin:22px 0">
+            <div class="form-label" style="margin-bottom:10px">Description</div>
+            <div style="font-size:15px;line-height:1.72;color:var(--text);white-space:pre-wrap">${listing.description}</div>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin:22px 0">
+            <div class="form-label" style="margin-bottom:12px">Seller Information</div>
+            <div style="display:flex;align-items:center;gap:14px;background:var(--bg);padding:16px;border-radius:var(--r);cursor:pointer;transition:var(--tr)" onclick="location.href='/myads.html?seller=${listing.seller._id}'" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='var(--bg)'">
+              ${avatarEl(listing.seller)}
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:15px">${listing.seller.name}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Member since ${new Date(listing.seller.createdAt).getFullYear()}</div>
+              </div>
+              <span style="color:var(--gold);font-size:13px;font-weight:600">View All Ads →</span>
+            </div>
+
+            <!-- Action Bar — NO call button, NO buy now button -->
+            <div class="action-bar">
+              ${isMine ? `
+                <a href="/sell.html?edit=${listing._id}" class="btn btn-outline" style="flex:1">✏️ Edit Ad</a>
+                <button class="btn ${listing.status==='sold'?'btn-ghost':'btn-green'}" onclick="toggleSold()" style="flex:1">
+                  ${listing.status==='sold'?'✓ Mark Active':'Mark as Sold'}
+                </button>
+                <button class="btn btn-red" onclick="delListing()" style="padding:12px 16px" title="Delete">🗑️</button>
+              ` : listing.status === 'active' ? `
+                <button class="btn btn-ghost" style="padding:12px 14px" onclick="toggleWl()" id="wl-btn">${inWl?'❤️':'🤍'}</button>
+                <button class="btn btn-gold" onclick="startChat()" style="flex:1">💬 Message Seller</button>
+              ` : `
+                <div class="btn btn-ghost btn-full" style="cursor:default;opacity:.6;justify-content:center">
+                  ${listing.status==='sold'?'This item has been sold':'This listing is unavailable'}
+                </div>
+              `}
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function toggleWl() {
+      const added = Wishlist.toggle(listing._id);
+      ['wl-nav','wl-btn'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = added?'❤️':'🤍'; });
+      showToast(added ? 'Added to wishlist ❤️' : 'Removed from wishlist', added ? 'success' : 'info');
+    }
+
+    async function startChat() {
+      try {
+        const chat = await apiFetch('/chats/start', {
+          method: 'POST',
+          body: JSON.stringify({ listingId: listing._id, buyerId: user._id, sellerId: listing.seller._id })
+        });
+        location.href = '/chat.html?id=' + chat._id;
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function toggleSold() {
+      try {
+        await apiFetch('/listings/' + listing._id, { method: 'PUT', body: JSON.stringify({ status: listing.status === 'sold' ? 'active' : 'sold' }) });
+        showToast('Status updated!', 'success');
+        load();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function delListing() {
+      if (!confirm('Delete this listing permanently?')) return;
+      try {
+        await apiFetch('/listings/' + listing._id, { method: 'DELETE' });
+        showToast('Listing deleted', 'info');
+        setTimeout(() => location.href = '/', 800);
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    load();
+  </script>
+</body>
+</html>

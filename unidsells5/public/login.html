@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    /* Tab switcher */
+    .auth-tabs {
+      display: flex;
+      background: var(--bg2);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 28px;
+      gap: 4px;
+    }
+    .auth-tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px 12px;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: var(--tr);
+    }
+    .auth-tab.active {
+      background: #fff;
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    /* Step indicator for forgot password */
+    .fp-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+    .fp-step-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: var(--tr);
+    }
+    .fp-step-dot.active { background: var(--gold); width: 24px; border-radius: 4px; }
+    .fp-step-dot.done  { background: var(--green); }
+
+    /* Code reveal box */
+    .code-box {
+      background: rgba(200,151,58,.07);
+      border: 1px solid rgba(200,151,58,.25);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .code-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 10px;
+      margin: 6px 0;
+    }
+
+    /* OTP input */
+    .otp-field {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid var(--border);
+      border-radius: var(--r);
+      font-size: 26px;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: 10px;
+      text-transform: uppercase;
+      transition: var(--tr);
+      font-family: 'Playfair Display', serif;
+      outline: none;
+    }
+    .otp-field:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,151,58,.12); }
+
+    /* Password strength */
+    .pw-bars { display: flex; gap: 4px; margin-bottom: 5px; }
+    .pw-bar  { flex: 1; height: 4px; border-radius: 2px; background: var(--border); transition: var(--tr); }
+
+    /* Show/hide toggle */
+    .pw-wrap { position: relative; }
+    .pw-toggle {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      background: none; color: var(--text-muted); font-size: 16px; cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .auth-left { display: none !important; }
+    }
+  </style>
+</head>
+<body style="padding-bottom:0">
+
+<div class="auth-wrap">
+
+  <!-- LEFT PANEL -->
+  <div class="auth-left">
+    <div class="auth-left-inner">
+      <div class="auth-logo">UnidSells</div>
+      <div class="auth-tagline">Buy &amp; Sell <span style="color:var(--gold)">Anything</span> Near You</div>
+      <div class="auth-sub">India's most trusted marketplace. Buy, sell, chat — all in one place.</div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:36px">
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.55);font-size:14px">
+          <span style="color:var(--gold);font-size:17px">✓</span> Free to post unlimited ads
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.55);font-size:14px">
+          <span style="color:var(--gold);font-size:17px">✓</span> Real-time chat with buyers & sellers
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.55);font-size:14px">
+          <span style="color:var(--gold);font-size:17px">✓</span> Safe, secure transactions
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.55);font-size:14px">
+          <span style="color:var(--gold);font-size:17px">✓</span> Admin panel for platform control
+        </div>
+      </div>
+
+      <div style="margin-top:40px;background:rgba(200,151,58,.08);border:1px solid rgba(200,151,58,.2);border-radius:14px;padding:20px">
+        <div style="color:var(--gold);font-family:'Playfair Display',serif;font-size:16px;font-weight:700;margin-bottom:6px">One login for everyone</div>
+        <div style="color:rgba(255,255,255,.45);font-size:13px;line-height:1.7">Users and Admins use the same login. Admins are automatically redirected to the control panel.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="auth-right">
+    <div class="auth-form" id="auth-form">
+
+      <!-- ═══════════════════════════════════════
+           PANEL A — LOGIN / SIGNUP TABS
+      ════════════════════════════════════════ -->
+      <div id="panel-auth">
+        <div class="auth-tabs">
+          <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+          <div class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Create Account</div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="form-login">
+          <h2 style="margin-bottom:6px">Welcome back</h2>
+          <p style="color:var(--text-muted);margin-bottom:24px;font-size:14px">Sign in to your UnidSells account</p>
+
+          <div class="form-group">
+            <label class="form-label">Email or Mobile Number</label>
+            <input type="text" id="l-identifier" class="form-input" placeholder="Enter email or mobile">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="l-password" class="form-input" placeholder="Your password" style="padding-right:46px">
+              <button class="pw-toggle" onclick="togglePw('l-password',this)" tabindex="-1">👁️</button>
+            </div>
+          </div>
+
+          <div style="text-align:right;margin-top:-10px;margin-bottom:20px">
+            <button onclick="showForgot()" style="background:none;color:var(--gold);font-size:13px;font-weight:600;cursor:pointer">Forgot password?</button>
+          </div>
+
+          <button class="btn btn-gold btn-full" id="login-btn" onclick="doLogin()">Sign In →</button>
+
+          <div style="text-align:center;margin-top:20px;font-size:14px;color:var(--text-muted)">
+            No account? <button onclick="switchTab('signup')" style="background:none;color:var(--gold);font-weight:600;font-size:14px;cursor:pointer">Create one free</button>
+          </div>
+        </div>
+
+        <!-- SIGNUP FORM -->
+        <div id="form-signup" style="display:none">
+          <h2 style="margin-bottom:6px">Create Account</h2>
+          <p style="color:var(--text-muted);margin-bottom:24px;font-size:14px">Join UnidSells for free today</p>
+
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" id="s-name" class="form-input" placeholder="Your full name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address *</label>
+            <input type="email" id="s-email" class="form-input" placeholder="you@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mobile Number (optional)</label>
+            <input type="tel" id="s-mobile" class="form-input" placeholder="+91 98765 43210">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password *</label>
+            <div class="pw-wrap">
+              <input type="password" id="s-password" class="form-input" placeholder="Minimum 6 characters" style="padding-right:46px">
+              <button class="pw-toggle" onclick="togglePw('s-password',this)" tabindex="-1">👁️</button>
+            </div>
+          </div>
+
+          <button class="btn btn-gold btn-full" id="signup-btn" onclick="doSignup()">Create Account →</button>
+
+          <div style="text-align:center;margin-top:20px;font-size:14px;color:var(--text-muted)">
+            Have an account? <button onclick="switchTab('login')" style="background:none;color:var(--gold);font-weight:600;font-size:14px;cursor:pointer">Sign in</button>
+          </div>
+        </div>
+      </div><!-- end panel-auth -->
+
+
+      <!-- ═══════════════════════════════════════
+           PANEL B — FORGOT PASSWORD (3 steps)
+      ════════════════════════════════════════ -->
+      <div id="panel-forgot" style="display:none">
+
+        <div style="margin-bottom:4px">
+          <button onclick="showAuth()" style="background:none;color:var(--gold);font-size:13px;font-weight:600;cursor:pointer">← Back to Login</button>
+        </div>
+
+        <div class="fp-steps">
+          <div class="fp-step-dot active" id="fd1"></div>
+          <div class="fp-step-dot" id="fd2"></div>
+          <div class="fp-step-dot" id="fd3"></div>
+        </div>
+
+        <div style="text-align:center;margin-bottom:24px">
+          <h2 id="fp-title" style="font-size:22px;margin-bottom:6px">Forgot Password?</h2>
+          <p id="fp-desc" style="color:var(--text-muted);font-size:14px">Enter your registered email or mobile</p>
+        </div>
+
+        <!-- FP Step 1: Enter identifier -->
+        <div id="fp-s1">
+          <div class="form-group">
+            <label class="form-label">Email or Mobile Number</label>
+            <input type="text" id="fp-identifier" class="form-input" placeholder="your@email.com or 9876543210">
+          </div>
+          <button class="btn btn-gold btn-full" id="fp-send-btn" onclick="fpSendCode()">Send Reset Code →</button>
+        </div>
+
+        <!-- FP Step 2: Enter OTP -->
+        <div id="fp-s2" style="display:none">
+          <div class="code-box">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Your Reset Code</div>
+            <div class="code-value" id="fp-code-show">——</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">⚠️ In production this is sent via email/SMS · Expires in 15 min</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Enter the 6-Character Code</label>
+            <input type="text" id="fp-otp" class="otp-field" placeholder="••••••" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <button class="btn btn-gold btn-full" onclick="fpVerify()">Verify Code →</button>
+          <div style="text-align:center;margin-top:12px">
+            <button onclick="fpGoStep(1)" style="background:none;color:var(--text-muted);font-size:13px;cursor:pointer">Didn't get it? Try again</button>
+          </div>
+        </div>
+
+        <!-- FP Step 3: New password -->
+        <div id="fp-s3" style="display:none">
+          <div style="background:rgba(30,123,75,.07);border:1px solid rgba(30,123,75,.2);border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:13px;color:var(--green);display:flex;align-items:center;gap:8px">
+            <span style="font-size:16px">✓</span> Code verified! Now set your new password.
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="fp-newpw" class="form-input" placeholder="Minimum 6 characters" style="padding-right:46px" oninput="fpCheckStrength(this.value)">
+              <button class="pw-toggle" onclick="togglePw('fp-newpw',this)" tabindex="-1">👁️</button>
+            </div>
+            <div id="fp-strength" style="display:none;margin-top:8px">
+              <div class="pw-bars" id="fp-bars"></div>
+              <div id="fp-slabel" style="font-size:12px;color:var(--text-muted);margin-top:3px"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="fp-confpw" class="form-input" placeholder="Re-enter password" style="padding-right:46px">
+              <button class="pw-toggle" onclick="togglePw('fp-confpw',this)" tabindex="-1">👁️</button>
+            </div>
+          </div>
+          <button class="btn btn-gold btn-full" onclick="fpReset()">Reset Password →</button>
+        </div>
+
+        <!-- FP Step 4: Success -->
+        <div id="fp-s4" style="display:none;text-align:center">
+          <div style="font-size:60px;margin-bottom:16px">✅</div>
+          <h3 style="font-size:22px;margin-bottom:8px">Password Reset!</h3>
+          <p style="color:var(--text-muted);margin-bottom:24px;font-size:14px;line-height:1.65">Your password has been updated. You can now sign in with your new password.</p>
+          <button class="btn btn-gold btn-full" onclick="showAuth()">Sign In Now →</button>
+        </div>
+
+      </div><!-- end panel-forgot -->
+
+    </div><!-- end auth-form -->
+  </div><!-- end auth-right -->
+
+</div><!-- end auth-wrap -->
+
+<div class="toast-container"></div>
+<script src="/app.js"></script>
+<script>
+  // Redirect if already logged in
+  if (Auth.getUser()) window.location.href = '/';
+
+  /* ─── TAB SWITCHING ─────────────────────── */
+  function switchTab(tab) {
+    const isLogin = tab === 'login';
+    document.getElementById('form-login').style.display  = isLogin ? 'block' : 'none';
+    document.getElementById('form-signup').style.display = isLogin ? 'none'  : 'block';
+    document.getElementById('tab-login').classList.toggle('active',  isLogin);
+    document.getElementById('tab-signup').classList.toggle('active', !isLogin);
+  }
+
+  /* ─── SHOW / HIDE PANELS ────────────────── */
+  function showForgot() {
+    document.getElementById('panel-auth').style.display   = 'none';
+    document.getElementById('panel-forgot').style.display = 'block';
+    fpGoStep(1);
+  }
+  function showAuth() {
+    document.getElementById('panel-forgot').style.display = 'none';
+    document.getElementById('panel-auth').style.display   = 'block';
+  }
+
+  /* ─── PW TOGGLE ─────────────────────────── */
+  function togglePw(inputId, btn) {
+    const inp = document.getElementById(inputId);
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.textContent = show ? '🙈' : '👁️';
+  }
+
+  /* ─── LOGIN ─────────────────────────────── */
+  async function doLogin() {
+    const id = document.getElementById('l-identifier').value.trim();
+    const pw = document.getElementById('l-password').value;
+    if (!id || !pw) return showToast('Please fill all fields', 'error');
+    const btn = document.getElementById('login-btn');
+    btn.textContent = 'Signing in…'; btn.disabled = true;
+    try {
+      const d = await apiFetch('/users/login', {
+        method: 'POST',
+        body: JSON.stringify({ identifier: id, password: pw })
+      });
+      Auth.setUser(d.user);
+      if (d.user.email === 'admin@gmail.com' || d.user.role === 'admin') {
+        showToast('Welcome, Admin ' + d.user.name + '! 👑', 'success');
+        setTimeout(() => window.location.href = '/admin.html', 700);
+      } else {
+        showToast('Welcome back, ' + d.user.name + '! 🎉', 'success');
+        setTimeout(() => window.location.href = '/', 700);
+      }
+    } catch (e) {
+      showToast(e.message, 'error');
+      btn.textContent = 'Sign In →'; btn.disabled = false;
+    }
+  }
+
+  /* ─── SIGNUP ────────────────────────────── */
+  async function doSignup() {
+    const name     = document.getElementById('s-name').value.trim();
+    const email    = document.getElementById('s-email').value.trim();
+    const mobile   = document.getElementById('s-mobile').value.trim();
+    const password = document.getElementById('s-password').value;
+    if (!name || !email || !password) return showToast('Name, email and password are required', 'error');
+    if (password.length < 6) return showToast('Password must be at least 6 characters', 'error');
+    const btn = document.getElementById('signup-btn');
+    btn.textContent = 'Creating…'; btn.disabled = true;
+    try {
+      const d = await apiFetch('/users/signup', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, mobile: mobile || undefined, password })
+      });
+      Auth.setUser(d.user);
+      showToast('Welcome to UnidSells, ' + d.user.name + '! 🎉', 'success');
+      setTimeout(() => window.location.href = '/', 700);
+    } catch (e) {
+      showToast(e.message, 'error');
+      btn.textContent = 'Create Account →'; btn.disabled = false;
+    }
+  }
+
+  /* ─── FORGOT PASSWORD ───────────────────── */
+  let fp_userId = '', fp_token = '';
+
+  const FP_TITLES = {
+    1: 'Forgot Password?',
+    2: 'Enter Reset Code',
+    3: 'Set New Password',
+    4: 'All Done! 🎉'
+  };
+  const FP_DESCS = {
+    1: 'Enter your registered email or mobile',
+    2: 'Enter the 6-character code shown below',
+    3: 'Choose a strong new password',
+    4: 'Password reset successfully'
+  };
+
+  function fpGoStep(n) {
+    [1,2,3,4].forEach(i => {
+      document.getElementById('fp-s' + i).style.display = i === n ? 'block' : 'none';
+      const dot = document.getElementById('fd' + i);
+      if (dot) {
+        dot.className = 'fp-step-dot' + (i === n ? ' active' : i < n ? ' done' : '');
+      }
+    });
+    document.getElementById('fp-title').textContent = FP_TITLES[n];
+    document.getElementById('fp-desc').textContent  = FP_DESCS[n];
+  }
+
+  async function fpSendCode() {
+    const id = document.getElementById('fp-identifier').value.trim();
+    if (!id) return showToast('Enter your email or mobile number', 'error');
+    const btn = document.getElementById('fp-send-btn');
+    btn.textContent = 'Sending…'; btn.disabled = true;
+    try {
+      const d = await apiFetch('/users/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ identifier: id })
+      });
+      fp_userId = d.userId;
+      fp_token  = d.token;
+      document.getElementById('fp-code-show').textContent = d.token;
+      fpGoStep(2);
+      showToast('Reset code generated!', 'success');
+    } catch (e) { showToast(e.message, 'error'); }
+    btn.textContent = 'Send Reset Code →'; btn.disabled = false;
+  }
+
+  function fpVerify() {
+    const entered = document.getElementById('fp-otp').value.trim().toUpperCase();
+    if (!entered || entered.length < 6) return showToast('Enter the 6-character code', 'error');
+    if (entered !== fp_token.toUpperCase()) {
+      showToast('Invalid code — please try again', 'error');
+      const inp = document.getElementById('fp-otp');
+      inp.style.borderColor = 'var(--red)';
+      setTimeout(() => inp.style.borderColor = '', 1800);
+      return;
+    }
+    fpGoStep(3);
+    showToast('Code verified! ✓', 'success');
+  }
+
+  function fpCheckStrength(pw) {
+    const el = document.getElementById('fp-strength');
+    if (!pw) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    let s = 0;
+    if (pw.length >= 6)  s++;
+    if (pw.length >= 10) s++;
+    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++;
+    if (/[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw)) s++;
+    s = Math.max(1, s);
+    const colors = ['#C0392B','#D4621A','#C8973A','#1E7B4B'];
+    const labels = ['Weak','Fair','Good','Strong'];
+    const bars = document.getElementById('fp-bars');
+    bars.innerHTML = '';
+    for (let i = 1; i <= 4; i++) {
+      const b = document.createElement('div');
+      b.className = 'pw-bar';
+      b.style.background = i <= s ? colors[s-1] : '';
+      bars.appendChild(b);
+    }
+    document.getElementById('fp-slabel').textContent = labels[s-1] + ' password';
+  }
+
+  async function fpReset() {
+    const nw   = document.getElementById('fp-newpw').value;
+    const conf = document.getElementById('fp-confpw').value;
+    if (!nw || nw.length < 6) return showToast('Password must be at least 6 characters', 'error');
+    if (nw !== conf) return showToast('Passwords do not match', 'error');
+    try {
+      await apiFetch('/users/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ userId: fp_userId, token: fp_token, newPassword: nw })
+      });
+      fpGoStep(4);
+      showToast('Password reset successfully! ✓', 'success');
+    } catch (e) { showToast(e.message, 'error'); }
+  }
+
+  /* ─── KEYBOARD ENTER ────────────────────── */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const fp = document.getElementById('panel-forgot').style.display !== 'none';
+    if (fp) return; // Let forgot-password handle its own enters
+    if (document.getElementById('form-login').style.display !== 'none') doLogin();
+    else doSignup();
+  });
+</script>
+</body>
+</html>

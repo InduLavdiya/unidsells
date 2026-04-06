@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Chat – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body{display:flex;flex-direction:column;height:100vh;padding-bottom:0;overflow:hidden}
+    .chat-top{flex-shrink:0}
+    .listing-bar{background:#fff;padding:11px 40px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:var(--tr)}
+    .listing-bar:hover{background:var(--bg)}
+    .listing-bar img{width:46px;height:46px;border-radius:9px;object-fit:cover;border:1px solid var(--border)}
+    .msgs-wrap{flex:1;overflow-y:auto;padding:20px 40px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+    .date-div{text-align:center;font-size:11px;color:var(--text-muted);margin:6px 0;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+    .chat-bottom{flex-shrink:0;padding:13px 40px;background:#fff;border-top:1px solid var(--border);display:flex;align-items:center;gap:11px}
+    .chat-inp{flex:1;padding:12px 18px;border:1.5px solid var(--border);border-radius:99px;font-size:14px;background:var(--bg);transition:var(--tr)}
+    .chat-inp:focus{border-color:var(--gold);background:#fff;box-shadow:0 0 0 3px rgba(200,151,58,.1)}
+    .send-btn{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;box-shadow:var(--shadow-gold);transition:var(--tr)}
+    .send-btn:hover{transform:scale(1.1)}
+    @media(max-width:768px){.msgs-wrap{padding:14px 16px}.listing-bar{padding:10px 16px}.chat-bottom{padding:10px 14px}}
+  </style>
+</head>
+<body>
+  <div class="chat-top">
+    <nav class="top-nav">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="back-btn" onclick="location.href='/chat-list.html'">←</button>
+        <div id="other-av"></div>
+        <div>
+          <div id="other-name" style="color:#fff;font-weight:700;font-size:16px">Loading...</div>
+          <div id="listing-sub" style="color:rgba(255,255,255,.45);font-size:12px"></div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <button class="nav-btn" onclick="location.href='/'" title="Home">🏠</button>
+      </div>
+    </nav>
+    <div class="listing-bar" id="listing-bar" style="display:none" onclick="goListing()">
+      <img id="bar-img" src="" alt="" onerror="this.src='https://placehold.co/46?text=?'">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px" id="bar-title"></div>
+        <div style="font-size:13px;color:var(--gold);font-weight:700" id="bar-price"></div>
+      </div>
+      <span class="tag" id="bar-status"></span>
+      <span style="color:var(--text-muted);font-size:18px">›</span>
+    </div>
+  </div>
+  <div class="msgs-wrap" id="msgs"></div>
+  <div class="chat-bottom">
+    <input type="text" id="msg-inp" class="chat-inp" placeholder="Type a message...">
+    <button class="send-btn" onclick="sendMsg()">➤</button>
+  </div>
+  <div class="toast-container"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    const chatId = new URLSearchParams(location.search).get('id');
+    if (!chatId) location.href = '/chat-list.html';
+    let chat = null;
+    const socket = io();
+    socket.emit('join', user._id);
+    socket.emit('joinChat', chatId);
+    socket.on('newMessage', ({ chatId: cid, message }) => { if (cid === chatId) appendMsg(message); });
+    async function loadChat() {
+      try {
+        chat = await apiFetch('/chats/' + chatId);
+        const other = chat.buyer._id === user._id ? chat.seller : chat.buyer;
+        document.getElementById('other-name').textContent = other.name;
+        document.getElementById('listing-sub').textContent = chat.listing?.title || '';
+        document.getElementById('other-av').innerHTML = avatarEl(other, 'sm');
+        if (chat.listing) {
+          const bar = document.getElementById('listing-bar');
+          bar.style.display = 'flex';
+          document.getElementById('bar-img').src = chat.listing.images?.[0] || 'https://placehold.co/46?text=?';
+          document.getElementById('bar-title').textContent = chat.listing.title;
+          document.getElementById('bar-price').textContent = fmt(chat.listing.price);
+          const st = document.getElementById('bar-status');
+          st.textContent = chat.listing.status === 'sold' ? '🔒 Sold' : '✅ Available';
+          st.className = 'tag ' + (chat.listing.status === 'sold' ? 'tag-sold' : 'tag-active');
+        }
+        renderMsgs(chat.messages);
+        await apiFetch('/chats/' + chatId + '/read', { method: 'PUT', body: JSON.stringify({ userId: user._id }) });
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+    function goListing() { if (chat?.listing?._id) location.href = '/product.html?id=' + chat.listing._id; }
+    function renderMsgs(messages) {
+      const wrap = document.getElementById('msgs');
+      if (!messages.length) { wrap.innerHTML = '<div class="date-div">Start the conversation 👋</div>'; return; }
+      wrap.innerHTML = ''; let lastDate = '';
+      messages.forEach(m => {
+        const d = new Date(m.createdAt).toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' });
+        if (d !== lastDate) { lastDate = d; const div = document.createElement('div'); div.className = 'date-div'; div.textContent = d; wrap.appendChild(div); }
+        appendMsg(m, wrap);
+      });
+    }
+    function appendMsg(msg, container) {
+      const wrap = container || document.getElementById('msgs');
+      const mine = msg.sender === user._id || msg.sender?._id === user._id;
+      const div = document.createElement('div');
+      div.className = 'msg ' + (mine ? 'sent' : 'received');
+      div.innerHTML = msg.text + '<div class="time">' + new Date(msg.createdAt).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) + '</div>';
+      wrap.appendChild(div);
+      wrap.scrollTop = wrap.scrollHeight;
+    }
+    function sendMsg() {
+      const inp = document.getElementById('msg-inp');
+      const text = inp.value.trim();
+      if (!text) return;
+      inp.value = '';
+      socket.emit('sendMessage', { chatId, senderId: user._id, text });
+    }
+    document.getElementById('msg-inp').addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
+    loadChat();
+  </script>
+</body>
+</html>

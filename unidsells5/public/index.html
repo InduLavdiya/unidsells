@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>UnidSells – Buy & Sell Anything</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="logo" onclick="location.href='/'">Unid<span>Sells</span></div>
+    <div class="nav-links">
+      <a class="nav-link active" href="/">Home</a>
+      <a class="nav-link" href="/budget.html">Budget Filter</a>
+      <a class="nav-link" href="/myads.html">My Ads</a>
+      <a class="nav-link" href="/chat-list.html">Messages</a>
+    </div>
+    <div class="nav-actions">
+      <div class="nav-btn" onclick="location.href='/wishlist.html'" title="Wishlist">❤️</div>
+      <div class="nav-btn" onclick="location.href='/chat-list.html'" style="position:relative">
+        💬<span class="badge" id="chat-badge" style="top:-4px;right:-4px"></span>
+      </div>
+      <div id="avatar-nav" onclick="location.href='/account.html'" style="cursor:pointer"></div>
+      <a href="/sell.html" class="btn btn-gold btn-sm">+ Post Ad</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">🇮🇳 India's Premium Marketplace</div>
+      <h1>Find <span>Anything</span>,<br>Sell Everything</h1>
+      <p>Millions of listings across electronics, vehicles, furniture, fashion and more — all near you.</p>
+      <div class="hero-search">
+        <input type="text" id="search-input" placeholder="Search for phones, cars, furniture..." oninput="debounce()">
+        <button onclick="loadListings()">🔍 Search</button>
+      </div>
+      <div class="hero-stats" id="hero-stats">
+        <div class="hs"><div class="num">—</div><div class="lbl">Active Listings</div></div>
+        <div class="hs"><div class="num">Free</div><div class="lbl">To Join</div></div>
+        <div class="hs"><div class="num">10K+</div><div class="lbl">Happy Users</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cat-bar">
+    <div class="cat-tab active" onclick="filterCat('All',this)">🏷️ All</div>
+    <div class="cat-tab" onclick="filterCat('Electronics',this)">📱 Electronics</div>
+    <div class="cat-tab" onclick="filterCat('Vehicles',this)">🚗 Vehicles</div>
+    <div class="cat-tab" onclick="filterCat('Furniture',this)">🛋️ Furniture</div>
+    <div class="cat-tab" onclick="filterCat('Fashion',this)">👗 Fashion</div>
+    <div class="cat-tab" onclick="filterCat('Books',this)">📚 Books</div>
+    <div class="cat-tab" onclick="filterCat('Sports',this)">⚽ Sports</div>
+    <div class="cat-tab" onclick="filterCat('Home & Garden',this)">🌿 Home</div>
+    <div class="cat-tab" onclick="filterCat('Jobs',this)">💼 Jobs</div>
+    <div class="cat-tab" onclick="filterCat('Services',this)">🔧 Services</div>
+    <div class="cat-tab" onclick="filterCat('Other',this)">📦 Other</div>
+  </div>
+
+  <div class="section-bar">
+    <h2 class="section-title" id="sec-title">Latest Listings</h2>
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:13px;color:var(--text-muted)" id="count-lbl"></span>
+      <a class="section-link" href="/budget.html">Filter by Budget →</a>
+    </div>
+  </div>
+
+  <div id="listings-container"><div class="loader"><div class="spinner"></div></div></div>
+  <div id="bottom-nav"></div>
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    renderBottomNav('home');
+    updateBadge();
+    const av = document.getElementById('avatar-nav');
+    av.innerHTML = avatarEl(user, 'sm');
+
+    let cat = 'All', timer;
+    function debounce() { clearTimeout(timer); timer = setTimeout(loadListings, 380); }
+    function filterCat(c, el) {
+      cat = c;
+      document.querySelectorAll('.cat-tab').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      loadListings();
+    }
+
+    async function loadListings() {
+      document.getElementById('listings-container').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+      const q = document.getElementById('search-input').value.trim();
+      let url = '/listings?';
+      if (cat !== 'All') url += 'category=' + encodeURIComponent(cat) + '&';
+      if (q) url += 'search=' + encodeURIComponent(q) + '&';
+      try {
+        const listings = await apiFetch(url);
+        document.getElementById('count-lbl').textContent = listings.length + ' items found';
+        document.getElementById('sec-title').textContent = cat === 'All' ? 'Latest Listings' : cat;
+        document.getElementById('hero-stats').innerHTML = `
+          <div class="hs"><div class="num">${listings.length}+</div><div class="lbl">Active Listings</div></div>
+          <div class="hs"><div class="num">Free</div><div class="lbl">To Join</div></div>
+          <div class="hs"><div class="num">10K+</div><div class="lbl">Happy Users</div></div>`;
+        if (!listings.length) {
+          document.getElementById('listings-container').innerHTML = '<div class="empty-state"><div class="icon">🔍</div><h3>No listings found</h3><p>Try a different search or category</p></div>';
+          return;
+        }
+        const wl = Wishlist.get();
+        document.getElementById('listings-container').innerHTML = '<div class="products-grid">' + listings.map(l => renderProductCard(l, wl)).join('') + '</div>';
+      } catch (e) {
+        document.getElementById('listings-container').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Failed to load</h3><p>' + e.message + '</p></div>';
+      }
+    }
+    loadListings();
+  </script>
+</body>
+</html>

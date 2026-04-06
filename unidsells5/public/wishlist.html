@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Wishlist – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="logo" onclick="location.href='/'">Unid<span>Sells</span></div>
+    <div class="nav-actions">
+      <button class="btn btn-ghost btn-sm" onclick="location.href='/'">← Home</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearAll()">Clear All</button>
+    </div>
+  </nav>
+  <div style="background:var(--dark);padding:22px 40px 18px">
+    <h1 style="color:#fff;font-size:26px">❤️ Wishlist</h1>
+    <p style="color:rgba(255,255,255,.45);font-size:13px;margin-top:4px">Items you've saved for later</p>
+  </div>
+  <div id="wl-wrap" style="padding:28px 40px;max-width:1300px;margin:0 auto">
+    <div class="loader"><div class="spinner"></div></div>
+  </div>
+  <div id="bottom-nav"></div>
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    renderBottomNav('');
+    async function loadWl() {
+      const ids = Wishlist.get();
+      const c = document.getElementById('wl-wrap');
+      if (!ids.length) {
+        c.innerHTML = '<div class="empty-state"><div class="icon">❤️</div><h3>Your wishlist is empty</h3><p>Tap the heart icon on any listing to save it here</p><a href="/" class="btn btn-gold btn-sm" style="margin-top:18px">Browse Listings</a></div>';
+        return;
+      }
+      c.innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+      try {
+        const [a, s] = await Promise.all([apiFetch('/listings?status=active'), apiFetch('/listings?status=sold')]);
+        const items = [...a, ...s].filter(l => ids.includes(l._id));
+        if (!items.length) {
+          c.innerHTML = '<div class="empty-state"><div class="icon">❤️</div><h3>Items no longer available</h3><p>Saved items have been removed by sellers</p><a href="/" class="btn btn-gold btn-sm" style="margin-top:18px">Find New Items</a></div>';
+          return;
+        }
+        c.innerHTML = '<div class="products-grid" style="padding:0">' + items.map(l => {
+          const img = l.images?.[0] || 'https://placehold.co/400x300/F7F5F0/C8973A?text=No+Image';
+          return `<div class="product-card" onclick="location.href='/product.html?id=${l._id}'">
+            <div class="img-wrap">
+              <img src="${img}" alt="${l.title}" loading="lazy" onerror="this.src='https://placehold.co/400x300/F7F5F0/C8973A?text=?'">
+              ${l.status==='sold'?'<div class="sold-overlay"><div class="sold-stamp">SOLD</div></div>':''}
+              <button class="wishlist-btn active" onclick="event.stopPropagation();removeItem('${l._id}',this)">❤️</button>
+            </div>
+            <div class="card-body">
+              <div class="price">${fmt(l.price)}</div>
+              <div class="title">${l.title}</div>
+              <div class="meta">📍 ${l.location} · ${timeAgo(l.createdAt)}</div>
+            </div>
+          </div>`;
+        }).join('') + '</div>';
+      } catch (e) { c.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><h3>Error</h3><p>' + e.message + '</p></div>'; }
+    }
+    function removeItem(id, btn) {
+      Wishlist.remove(id);
+      const card = btn.closest('.product-card');
+      card.style.opacity = '0'; card.style.transform = 'scale(.9)'; card.style.transition = 'all .25s';
+      setTimeout(() => { card.remove(); if (!document.querySelectorAll('.product-card').length) loadWl(); }, 280);
+      showToast('Removed from wishlist', 'info');
+    }
+    function clearAll() {
+      if (!Wishlist.get().length) return;
+      if (!confirm('Clear your entire wishlist?')) return;
+      localStorage.removeItem('us_wl'); loadWl(); showToast('Wishlist cleared', 'info');
+    }
+    loadWl();
+  </script>
+</body>
+</html>

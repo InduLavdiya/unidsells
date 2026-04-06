@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Post Ad – UnidSells</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="logo" onclick="location.href='/'">Unid<span>Sells</span></div>
+    <div class="nav-actions"><button class="btn btn-ghost btn-sm" onclick="history.back()">← Back</button></div>
+  </nav>
+  <div class="sell-wrap">
+    <h1 id="page-title" style="margin-bottom:6px">Post an Ad</h1>
+    <p style="color:var(--text-muted);margin-bottom:28px;font-size:14px">Fill in all details to list your item for sale</p>
+
+    <!-- IMAGE SECTION -->
+    <div class="form-group">
+      <label class="form-label">Photos — Upload from device or paste a link (up to 6)</label>
+      <input type="file" id="file-inp" accept="image/*" multiple style="display:none" onchange="onFileSelect(this)">
+
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-inp').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
+        ondragleave="this.style.borderColor=''"
+        ondrop="onDrop(event)">
+        <div style="font-size:44px;margin-bottom:10px">📷</div>
+        <div style="font-weight:700;font-size:15px">Click or Drag &amp; Drop Photos</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:5px">JPG · PNG · WEBP · GIF &nbsp;|&nbsp; Max 10MB per image &nbsp;|&nbsp; Up to 6 photos</div>
+      </div>
+
+      <!-- Previews grid -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px" id="preview-grid"></div>
+
+      <!-- URL paste -->
+      <div style="margin-top:14px;background:var(--bg2);border-radius:var(--r);padding:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Or Paste an Image URL</div>
+        <div style="display:flex;gap:8px">
+          <input type="url" id="url-inp" class="form-input" placeholder="https://example.com/photo.jpg" style="flex:1;margin:0">
+          <button class="btn btn-dark btn-sm" onclick="addUrl()" style="white-space:nowrap">＋ Add</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Paste a direct link to any image on the web</div>
+      </div>
+    </div>
+
+    <!-- FORM FIELDS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Ad Title *</label>
+        <input type="text" id="title" class="form-input" placeholder="What are you selling? (e.g. iPhone 13 Pro 128GB)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category *</label>
+        <select id="category" class="form-input">
+          <option value="">Select category</option>
+          <option>Electronics</option><option>Vehicles</option><option>Furniture</option>
+          <option>Fashion</option><option>Books</option><option>Sports</option>
+          <option>Home & Garden</option><option>Jobs</option><option>Services</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Price (₹) *</label>
+        <input type="number" id="price" class="form-input" placeholder="0" min="0">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Description *</label>
+        <textarea id="description" class="form-input" rows="4" placeholder="Describe condition, features, reason for selling..."></textarea>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Location *</label>
+        <input type="text" id="location" class="form-input" placeholder="City, Area (e.g. Hyderabad, Kukatpally)">
+      </div>
+    </div>
+
+    <!-- Image count info -->
+    <div id="img-info" style="font-size:13px;color:var(--text-muted);margin-bottom:12px"></div>
+
+    <button class="btn btn-gold btn-full" id="submit-btn" onclick="submitAd()" style="padding:15px;font-size:15px">
+      🚀 Post Ad Now
+    </button>
+  </div>
+
+  <div id="bottom-nav"></div>
+  <div class="toast-container"></div>
+  <script src="/app.js"></script>
+  <script>
+    const user = Auth.require(); if (!user) throw 0;
+    renderBottomNav('');
+    const editId = new URLSearchParams(location.search).get('edit');
+
+    // Image state
+    // existingImages: paths already saved on server (from editing)
+    // newFiles: new File objects from device
+    // urlImages: new URLs pasted by user
+    let existingImages = [];
+    let newFiles = [];
+    let urlImages = [];
+
+    if (editId) {
+      document.getElementById('page-title').textContent = 'Edit Ad';
+      document.getElementById('submit-btn').textContent = '💾 Update Ad';
+      loadEdit();
+    }
+
+    async function loadEdit() {
+      try {
+        const l = await apiFetch('/listings/' + editId);
+        document.getElementById('title').value = l.title;
+        document.getElementById('price').value = l.price;
+        document.getElementById('category').value = l.category;
+        document.getElementById('description').value = l.description;
+        document.getElementById('location').value = l.location;
+        // Load existing images into state and show them
+        existingImages = l.images || [];
+        existingImages.forEach((src, i) => addPreviewDOM(src, 'existing', i));
+        updateInfo();
+      } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    function totalImages() {
+      return existingImages.length + newFiles.length + urlImages.length;
+    }
+
+    function updateInfo() {
+      const n = totalImages();
+      document.getElementById('img-info').textContent = n > 0
+        ? n + ' image' + (n > 1 ? 's' : '') + ' added' + (n === 6 ? ' (maximum)' : '')
+        : 'No images added yet';
+    }
+
+    // Add a DOM preview card
+    function addPreviewDOM(src, type, idx) {
+      const wrap = document.getElementById('preview-grid');
+      const div = document.createElement('div');
+      div.className = 'img-thumb';
+      div.dataset.type = type;
+      div.dataset.idx = String(idx);
+      div.innerHTML = `<img src="${src}" onerror="this.src='https://placehold.co/86x86?text=?'"><div class="rm-btn" onclick="removePreview(this,'${type}',${idx})">✕</div>`;
+      wrap.appendChild(div);
+    }
+
+    function onFileSelect(input) {
+      const files = Array.from(input.files);
+      if (totalImages() + files.length > 6) {
+        showToast('Maximum 6 images allowed', 'error');
+        input.value = ''; return;
+      }
+      files.forEach(f => {
+        if (!f.type.startsWith('image/')) { showToast(f.name + ' is not an image', 'error'); return; }
+        const idx = newFiles.length;
+        newFiles.push(f);
+        const reader = new FileReader();
+        reader.onload = e => { addPreviewDOM(e.target.result, 'file', idx); updateInfo(); };
+        reader.readAsDataURL(f);
+      });
+      input.value = '';
+    }
+
+    function onDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').style.borderColor = '';
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (!files.length) return showToast('Only image files allowed', 'error');
+      if (totalImages() + files.length > 6) return showToast('Maximum 6 images', 'error');
+      files.forEach(f => {
+        const idx = newFiles.length;
+        newFiles.push(f);
+        const reader = new FileReader();
+        reader.onload = ev => { addPreviewDOM(ev.target.result, 'file', idx); updateInfo(); };
+        reader.readAsDataURL(f);
+      });
+    }
+
+    function addUrl() {
+      const url = document.getElementById('url-inp').value.trim();
+      if (!url) return showToast('Enter an image URL', 'error');
+      if (!url.startsWith('http')) return showToast('URL must start with http:// or https://', 'error');
+      if (totalImages() >= 6) return showToast('Maximum 6 images allowed', 'error');
+      const idx = urlImages.length;
+      urlImages.push(url);
+      addPreviewDOM(url, 'url', idx);
+      document.getElementById('url-inp').value = '';
+      updateInfo();
+      showToast('Image URL added!', 'success');
+    }
+
+    function removePreview(btn, type, idx) {
+      const card = btn.closest('.img-thumb');
+      card.remove();
+      if (type === 'existing') existingImages.splice(idx, 1);
+      else if (type === 'file') newFiles.splice(idx, 1);
+      else if (type === 'url') urlImages.splice(idx, 1);
+      // Re-index remaining items of same type
+      document.querySelectorAll(`.img-thumb[data-type="${type}"]`).forEach((el, i) => el.dataset.idx = i);
+      updateInfo();
+    }
+
+    async function submitAd() {
+      const title = document.getElementById('title').value.trim();
+      const category = document.getElementById('category').value;
+      const price = document.getElementById('price').value;
+      const description = document.getElementById('description').value.trim();
+      const location = document.getElementById('location').value.trim();
+
+      if (!title) return showToast('Please enter a title', 'error');
+      if (!category) return showToast('Please select a category', 'error');
+      if (!price || Number(price) < 0) return showToast('Please enter a valid price', 'error');
+      if (!description) return showToast('Please add a description', 'error');
+      if (!location) return showToast('Please enter a location', 'error');
+
+      const btn = document.getElementById('submit-btn');
+      btn.textContent = editId ? '⏳ Updating...' : '⏳ Posting...';
+      btn.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('category', category);
+        formData.append('price', price);
+        formData.append('description', description);
+        formData.append('location', location);
+        formData.append('seller', user._id);
+
+        // Append new files from device
+        newFiles.forEach(f => formData.append('images', f));
+
+        // Send existing images to keep (CRITICAL for edit mode)
+        if (editId) {
+          formData.append('keepImages', JSON.stringify(existingImages));
+        }
+
+        // Send URL images
+        if (urlImages.length > 0) {
+          formData.append('imageUrls', JSON.stringify(urlImages));
+        }
+
+        const endpoint = editId ? '/api/listings/' + editId : '/api/listings';
+        const method = editId ? 'PUT' : 'POST';
+
+        // NO Content-Type header — let browser set multipart boundary automatically
+        const res = await fetch(endpoint, { method, body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+
+        showToast(editId ? 'Ad updated! ✓' : 'Ad posted! 🎉', 'success');
+        setTimeout(() => {
+          window.location.href = editId ? '/product.html?id=' + editId : '/myads.html';
+        }, 800);
+      } catch (e) {
+        showToast(e.message, 'error');
+        btn.textContent = editId ? '💾 Update Ad' : '🚀 Post Ad Now';
+        btn.disabled = false;
+      }
+    }
+
+    updateInfo();
+  </script>
+</body>
+</html>
