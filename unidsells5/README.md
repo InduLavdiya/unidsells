@@ -57,27 +57,29 @@ UnidSells is a full-stack web application where users can buy and sell products,
 ##  Screenshots
 
 
-
 ###  Home Page
-![Home](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/screenshots/home.png)
+![Home](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/unidsells5/screenshots/home.jpeg)
 
 ###  Login Page
-![Login](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/screenshots/login.png)
+![Login](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/unidsells5/screenshots/login.jpeg)
 
 ###  Product Page
-![Product](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/screenshots/product.png)
+![Product](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/unidsells5/screenshots/product.jpeg)
 
 ###  Post Ad Page
-![Post Ad](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/screenshots/postad.png)
+![Post Ad](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/unidsells5/screenshots/postad.jpeg)
 
 ###  Chat Page
-![Chat](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/screenshots/chat.png)
+![Chat](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/unidsells5/screenshots/chat.jpeg)
 
 ###  Budget Page
-![Budget](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/screenshots/budget.png)
+![Budget](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/unidsells5/screenshots/budget.jpeg)
 
 ###  Owner Controls
-![Owner](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/screenshots/owner-controls.png)
+![Owner](https://raw.githubusercontent.com/InduLavdiya/unidsells/main/unidsells5/screenshots/owner-controls.jpeg)
+
+
+
 ---
 
 ##  Author
