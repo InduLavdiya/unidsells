@@ -56,26 +56,27 @@ UnidSells is a full-stack web application where users can buy and sell products,
 
 ##  Screenshots
 
+
 ###  Home Page
-![Home](unidsells5/screenshots/home.png)
+![Home](screenshots/home.png)
 
 ###  Login Page
-![Login](unidsells5/screenshots/login.png)
+![Login](screenshots/login.png)
 
 ###  Product Page
-![Product](unidsells5/screenshots/product.png)
+![Product](screenshots/product.png)
 
-### ➕ Post Ad Page
-![Post Ad](unidsells5/screenshots/postad.png)
+###  Post Ad Page
+![Post Ad](screenshots/postad.png)
 
 ###  Chat Page
-![Chat](unidsells5/screenshots/chat.png)
+![Chat](screenshots/chat.png)
 
 ###  Budget Page
-![Budget](unidsells5/screenshots/budget.png)
+![Budget](screenshots/budget.png)
 
 ###  Owner Controls
-![Owner](unidsells5/screenshots/owner-controls.png)
+![Owner](screenshots/owner-controls.png)
 
 ---
 
