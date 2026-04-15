@@ -1,0 +1,32 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install Backend Dependencies
+      run: npm install
+
+    - name: Run Backend Tests
+      run: echo "No tests yet"
+
+    - name: Install Frontend Dependencies
+      run: echo "No frontend build needed"
+
+    - name: Build React App
+      run: echo "Skipping build (not React project)"
